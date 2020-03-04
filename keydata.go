@@ -42,6 +42,7 @@ const (
 	privateKeyDataHeader uint32 = 0x55534b50
 )
 
+// AuthMode corresponds to an authentication mechanism.
 type AuthMode uint8
 
 const (
@@ -49,6 +50,8 @@ const (
 	AuthModePIN
 )
 
+// privateKeyData corresponds to the private part of a sealed key object that is required in order to create new dynamic
+// authorization policies.
 type privateKeyData struct {
 	Data struct {
 		AuthKey []byte
@@ -57,6 +60,8 @@ type privateKeyData struct {
 	CreationTicket *tpm2.TkCreation
 }
 
+// keyData corresponds to the part of a sealed key object that contains the TPM sealed object and associated metadata required
+// for executing authorization policy assertions.
 type keyData struct {
 	KeyPrivate        tpm2.Private
 	KeyPublic         *tpm2.Public
@@ -65,6 +70,7 @@ type keyData struct {
 	DynamicPolicyData *dynamicPolicyData
 }
 
+// readPrivateData deserializes privateKeyData from the provided io.Reader.
 func readPrivateData(buf io.Reader) (*privateKeyData, error) {
 	var header uint32
 	var version uint32
@@ -87,6 +93,7 @@ func readPrivateData(buf io.Reader) (*privateKeyData, error) {
 	return &d, nil
 }
 
+// write serializes privateKeyData to the provided io.Writer.
 func (d *privateKeyData) write(buf io.Writer) error {
 	return tpm2.MarshalToWriter(buf, privateKeyDataHeader, currentVersion, d)
 }
@@ -99,6 +106,7 @@ func (e keyFileError) Error() string {
 	return e.err.Error()
 }
 
+// readKeyData deserializes keyData from the provided io.Reader.
 func readKeyData(buf io.Reader) (*keyData, error) {
 	var header uint32
 	var version uint32
@@ -121,6 +129,8 @@ func readKeyData(buf io.Reader) (*keyData, error) {
 	return &d, nil
 }
 
+// load loads the TPM sealed object associated with this keyData in to the storage hierarchy of the TPM, and returns the newly
+// created tpm2.ResourceContext.
 func (d *keyData) load(tpm *tpm2.TPMContext, session tpm2.SessionContext) (tpm2.ResourceContext, error) {
 	srkContext, err := tpm.CreateResourceContextFromTPM(srkHandle)
 	if err != nil {
@@ -148,10 +158,12 @@ func (d *keyData) load(tpm *tpm2.TPMContext, session tpm2.SessionContext) (tpm2.
 	return keyContext, nil
 }
 
+// write serializes keyData in to the provided io.Writer.
 func (d *keyData) write(buf io.Writer) error {
 	return tpm2.MarshalToWriter(buf, keyDataHeader, currentVersion, d)
 }
 
+// writeToFileAtomic serializes keyData and writes it atomically to the file at the specified path.
 func (d *keyData) writeToFileAtomic(dest string) error {
 	f, err := osutil.NewAtomicFile(dest, 0600, 0, sys.UserID(osutil.NoChown), sys.GroupID(osutil.NoChown))
 	if err != nil {
@@ -170,6 +182,8 @@ func (d *keyData) writeToFileAtomic(dest string) error {
 	return nil
 }
 
+// validateKeyData performs some correctness checking on the provided keyData and privateKeyData. On success, it returns the public
+// area for the PIN NV index.
 func validateKeyData(tpm *tpm2.TPMContext, data *keyData, privateData *privateKeyData, session tpm2.SessionContext) (*tpm2.NVPublic, error) {
 	srkContext, err := tpm.CreateResourceContextFromTPM(srkHandle)
 	if err != nil {
@@ -338,6 +352,8 @@ func validateKeyData(tpm *tpm2.TPMContext, data *keyData, privateData *privateKe
 	return pinIndexPublic, nil
 }
 
+// readAndValidateKeyData will deserialize keyData and privateKeyData from the provided io.Readers and then perform some correctness
+// checking. On success, it returns the keyData, privateKeyData and the public area of the PIN NV index.
 func readAndValidateKeyData(tpm *tpm2.TPMContext, keyFile, privateFile io.Reader, session tpm2.SessionContext) (*keyData, *privateKeyData, *tpm2.NVPublic, error) {
 	// Read the key data
 	data, err := readKeyData(keyFile)
