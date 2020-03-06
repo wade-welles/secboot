@@ -231,7 +231,7 @@ func validateKeyData(tpm *tpm2.TPMContext, data *keyData, privateData *privateKe
 	}
 	pinIndex, err := tpm.CreateResourceContextFromTPM(data.StaticPolicyData.PinIndexHandle, session.IncludeAttrs(tpm2.AttrAudit))
 	if err != nil {
-		if _, unavail := err.(tpm2.ResourceUnavailableError); unavail {
+		if isResourceUnavailableError(err) {
 			return nil, keyFileError{errors.New("PIN NV index is unavailable")}
 		}
 		return nil, xerrors.Errorf("cannot create context for PIN NV index: %w", err)
