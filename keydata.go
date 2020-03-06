@@ -182,12 +182,20 @@ func (d *keyData) writeToFileAtomic(dest string) error {
 	return nil
 }
 
-// validateKeyData performs some correctness checking on the provided keyData and privateKeyData. On success, it returns the public
-// area for the PIN NV index.
+// validateKeyData performs some correctness checking on the provided keyData and privateKeyData. On success, it returns the validated
+// public area for the PIN NV index.
 func validateKeyData(tpm *tpm2.TPMContext, data *keyData, privateData *privateKeyData, session tpm2.SessionContext) (*tpm2.NVPublic, error) {
 	srkContext, err := tpm.CreateResourceContextFromTPM(srkHandle)
 	if err != nil {
 		return nil, xerrors.Errorf("cannot create context for SRK: %w", err)
+	}
+
+	// Perform some initial checks on the sealed data object's public area
+	if data.KeyPublic.Type != tpm2.ObjectTypeKeyedHash {
+		return nil, keyFileError{errors.New("sealed key object has the wrong type")}
+	}
+	if data.KeyPublic.Attrs != (tpm2.AttrFixedTPM | tpm2.AttrFixedParent) {
+		return nil, keyFileError{errors.New("sealed key object has the wrong attributes")}
 	}
 
 	// Load the sealed data object in to the TPM for integrity checking
@@ -255,7 +263,7 @@ func validateKeyData(tpm *tpm2.TPMContext, data *keyData, privateData *privateKe
 	trial.PolicyNV(lockIndex.Name(), nil, 0, tpm2.OpEq)
 
 	if !bytes.Equal(trial.GetDigest(), data.KeyPublic.AuthPolicy) {
-		return nil, keyFileError{errors.New("static authorization policy data doesn't match sealed key object")}
+		return nil, keyFileError{errors.New("the sealed key object's authorization policy is inconsistent with the associatedc metadata or persistent TPM resources")}
 	}
 
 	pinIndexPublic, _, err := tpm.NVReadPublic(pinIndex, session.IncludeAttrs(tpm2.AttrAudit))
@@ -263,38 +271,17 @@ func validateKeyData(tpm *tpm2.TPMContext, data *keyData, privateData *privateKe
 		return nil, xerrors.Errorf("cannot read public area of PIN NV index: %w", err)
 	}
 
-	if len(data.StaticPolicyData.PinIndexAuthPolicies) != 5 {
-		return nil, keyFileError{errors.New("unexpected number of OR policy digests for PIN NV index")}
-	}
-
-	trial, err = tpm2.ComputeAuthPolicy(pinIndexPublic.NameAlg)
+	expectedPinIndexAuthPolicies, err := computePinNVIndexPostInitAuthPolicies(pinIndexPublic.NameAlg, authKeyName)
 	if err != nil {
 		return nil, keyFileError{xerrors.Errorf("cannot determine if PIN NV index has a valid authorization policy: %w", err)}
 	}
-	trial.PolicyCommandCode(tpm2.CommandNVIncrement)
-	trial.PolicyNvWritten(true)
-	trial.PolicySigned(authKeyName, nil)
-	if !bytes.Equal(trial.GetDigest(), data.StaticPolicyData.PinIndexAuthPolicies[1]) {
-		return nil, keyFileError{errors.New("unexpected OR policy digest for PIN NV index")}
+	if len(data.StaticPolicyData.PinIndexAuthPolicies)-1 != len(expectedPinIndexAuthPolicies) {
+		return nil, keyFileError{errors.New("unexpected number of OR policy digests for PIN NV index")}
 	}
-
-	trial, _ = tpm2.ComputeAuthPolicy(pinIndexPublic.NameAlg)
-	trial.PolicyCommandCode(tpm2.CommandNVChangeAuth)
-	trial.PolicyAuthValue()
-	if !bytes.Equal(trial.GetDigest(), data.StaticPolicyData.PinIndexAuthPolicies[2]) {
-		return nil, keyFileError{errors.New("unexpected OR policy digest for PIN NV index")}
-	}
-
-	trial, _ = tpm2.ComputeAuthPolicy(pinIndexPublic.NameAlg)
-	trial.PolicyCommandCode(tpm2.CommandNVRead)
-	if !bytes.Equal(trial.GetDigest(), data.StaticPolicyData.PinIndexAuthPolicies[3]) {
-		return nil, keyFileError{errors.New("unexpected OR policy digest for PIN NV index")}
-	}
-
-	trial, _ = tpm2.ComputeAuthPolicy(pinIndexPublic.NameAlg)
-	trial.PolicyCommandCode(tpm2.CommandPolicyNV)
-	if !bytes.Equal(trial.GetDigest(), data.StaticPolicyData.PinIndexAuthPolicies[4]) {
-		return nil, keyFileError{errors.New("unexpected OR policy digest for PIN NV index")}
+	for i, expected := range expectedPinIndexAuthPolicies {
+		if !bytes.Equal(expected, data.StaticPolicyData.PinIndexAuthPolicies[i+1]) {
+			return nil, keyFileError{errors.New("unexpected OR policy digest for PIN NV index")}
+		}
 	}
 
 	trial, _ = tpm2.ComputeAuthPolicy(pinIndexPublic.NameAlg)
@@ -304,7 +291,7 @@ func validateKeyData(tpm *tpm2.TPMContext, data *keyData, privateData *privateKe
 	}
 
 	// At this point, we know that the sealed object is an object with an authorization policy created by this package and with
-	// matching static authorization policy metadata.
+	// matching static metadata and persistent TPM resources.
 
 	if privateData == nil {
 		// If we weren't passed a private data structure, we're done.
@@ -353,7 +340,7 @@ func validateKeyData(tpm *tpm2.TPMContext, data *keyData, privateData *privateKe
 }
 
 // readAndValidateKeyData will deserialize keyData and privateKeyData from the provided io.Readers and then perform some correctness
-// checking. On success, it returns the keyData, privateKeyData and the public area of the PIN NV index.
+// checking. On success, it returns the keyData, privateKeyData and the validated public area of the PIN NV index.
 func readAndValidateKeyData(tpm *tpm2.TPMContext, keyFile, privateFile io.Reader, session tpm2.SessionContext) (*keyData, *privateKeyData, *tpm2.NVPublic, error) {
 	// Read the key data
 	data, err := readKeyData(keyFile)
