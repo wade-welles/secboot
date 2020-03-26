@@ -403,7 +403,7 @@ func ReadSealedKeyObject(path string) (*SealedKeyObject, error) {
 
 	data, err := readKeyData(f)
 	if err != nil {
-		return nil, InvalidKeyFileError{err.Error()}
+		return nil, InvalidKeyFileError(err.Error())
 	}
 
 	return &SealedKeyObject{data: data}, nil

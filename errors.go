@@ -78,12 +78,10 @@ func (e AuthFailError) Error() string {
 // EKCertVerificationError is returned from SecureConnectToDefaultTPM if verification of the EK certificate against the built-in
 // root CA certificates fails, or the EK certificate does not have the correct properties, or the supplied certificate data cannot
 // be unmarshalled correctly because it is invalid.
-type EKCertVerificationError struct {
-	msg string
-}
+type EKCertVerificationError string
 
 func (e EKCertVerificationError) Error() string {
-	return fmt.Sprintf("cannot verify the endorsement key certificate: %s", e.msg)
+	return "cannot verify the endorsement key certificate: " + string(e)
 }
 
 func isEKCertVerificationError(err error) bool {
@@ -93,12 +91,10 @@ func isEKCertVerificationError(err error) bool {
 
 // TPMVerificationError is returned from SecureConnectToDefaultTPM if the TPM cannot prove it is the device for which the verified
 // EK certificate was issued.
-type TPMVerificationError struct {
-	msg string
-}
+type TPMVerificationError string
 
 func (e TPMVerificationError) Error() string {
-	return fmt.Sprintf("cannot verify that the TPM is the device for which the supplied EK certificate was issued: %s", e.msg)
+	return "cannot verify that the TPM is the device for which the supplied EK certificate was issued: " + string(e)
 }
 
 func isTPMVerificationError(err error) bool {
@@ -109,12 +105,10 @@ func isTPMVerificationError(err error) bool {
 // InvalidKeyFileError indicates that the provided key data file is invalid. This error may also be returned in some
 // scenarious where the TPM is incorrectly provisioned, but it isn't possible to determine whether the error is with
 // the provisioning status or because the key data file is invalid.
-type InvalidKeyFileError struct {
-	msg string
-}
+type InvalidKeyFileError string
 
 func (e InvalidKeyFileError) Error() string {
-	return fmt.Sprintf("invalid key data file: %s", e.msg)
+	return "invalid key data file: " + string(e)
 }
 
 func isInvalidKeyFileError(err error) bool {

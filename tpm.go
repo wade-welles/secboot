@@ -905,12 +905,12 @@ func SecureConnectToDefaultTPM(ekCertDataReader io.Reader, endorsementAuth []byt
 	var certData *ekCertData
 	// Unmarshal supplied EK cert data
 	if _, err := tpm2.UnmarshalFromReader(ekCertDataReader, &certData); err != nil {
-		return nil, EKCertVerificationError{fmt.Sprintf("cannot unmarshal supplied EK certificate data: %v", err)}
+		return nil, EKCertVerificationError(fmt.Sprintf("cannot unmarshal supplied EK certificate data: %v", err))
 	}
 	if len(certData.Cert) == 0 {
 		// The supplied data only contains parent certificates. Retrieve the EK cert from the TPM.
 		if cert, err := readEkCertFromTPM(tpm); err != nil {
-			return nil, EKCertVerificationError{fmt.Sprintf("cannot obtain endorsement key certificate from TPM: %v", err)}
+			return nil, EKCertVerificationError(fmt.Sprintf("cannot obtain endorsement key certificate from TPM: %v", err))
 		} else {
 			certData.Cert = cert
 		}
@@ -918,7 +918,7 @@ func SecureConnectToDefaultTPM(ekCertDataReader io.Reader, endorsementAuth []byt
 
 	chain, attrs, err := verifyEkCertificate(certData)
 	if err != nil {
-		return nil, EKCertVerificationError{err.Error()}
+		return nil, EKCertVerificationError(err.Error())
 	}
 
 	t.verifiedEkCertChain = chain
@@ -930,7 +930,7 @@ func SecureConnectToDefaultTPM(ekCertDataReader io.Reader, endorsementAuth []byt
 		}
 		var verifyErr verificationError
 		if xerrors.As(err, &verifyErr) {
-			return nil, TPMVerificationError{err.Error()}
+			return nil, TPMVerificationError(err.Error())
 		}
 		return nil, xerrors.Errorf("cannot initialize TPM connection: %w", err)
 	}

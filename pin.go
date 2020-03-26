@@ -286,7 +286,7 @@ func ChangePIN(tpm *TPMConnection, path string, oldPIN, newPIN string) error {
 	if err != nil {
 		var kfErr keyFileError
 		if xerrors.As(err, &kfErr) {
-			return InvalidKeyFileError{err.Error()}
+			return InvalidKeyFileError(err.Error())
 		}
 		return xerrors.Errorf("cannot read and validate key data file: %w", err)
 	}

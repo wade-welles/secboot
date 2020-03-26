@@ -106,7 +106,7 @@ func (k *SealedKeyObject) UnsealFromTPM(tpm *TPMConnection, pin string) ([]byte,
 		}
 		// This is probably a broken key file, but it could still be a provisioning error because we don't know if the SRK object was
 		// created with the same template that ProvisionTPM uses.
-		return nil, InvalidKeyFileError{err.Error()}
+		return nil, InvalidKeyFileError(err.Error())
 	case tpm2.IsResourceUnavailableError(err, srkHandle):
 		return nil, ErrTPMProvisioning
 	case err != nil:
@@ -126,9 +126,9 @@ func (k *SealedKeyObject) UnsealFromTPM(tpm *TPMConnection, pin string) ([]byte,
 		switch {
 		case isDynamicPolicyDataError(err):
 			// TODO: Add a separate error for this
-			return nil, InvalidKeyFileError{err.Error()}
+			return nil, InvalidKeyFileError(err.Error())
 		case isStaticPolicyDataError(err):
-			return nil, InvalidKeyFileError{err.Error()}
+			return nil, InvalidKeyFileError(err.Error())
 		case isAuthFailError(err, tpm2.CommandPolicySecret, 1):
 			return nil, ErrPINFail
 		case tpm2.IsResourceUnavailableError(err, lockNVHandle):
@@ -143,7 +143,7 @@ func (k *SealedKeyObject) UnsealFromTPM(tpm *TPMConnection, pin string) ([]byte,
 	keyData, err := tpm.Unseal(key, policySession, hmacSession.IncludeAttrs(tpm2.AttrResponseEncrypt))
 	switch {
 	case tpm2.IsTPMSessionError(err, tpm2.ErrorPolicyFail, tpm2.CommandUnseal, 1):
-		return nil, InvalidKeyFileError{"the authorization policy check failed during unsealing"}
+		return nil, InvalidKeyFileError("the authorization policy check failed during unsealing")
 	case err != nil:
 		return nil, xerrors.Errorf("cannot unseal key: %w", err)
 	}

@@ -200,7 +200,7 @@ func ProvisionTPM(tpm *TPMConnection, mode ProvisionMode, newLockoutAuth []byte)
 	if err := tpm.init(); err != nil {
 		var verifyErr verificationError
 		if xerrors.As(err, &verifyErr) {
-			return TPMVerificationError{fmt.Sprintf("cannot reinitialize TPM connection after provisioning endorsement key: %v", err)}
+			return TPMVerificationError(fmt.Sprintf("cannot reinitialize TPM connection after provisioning endorsement key: %v", err))
 		}
 		return xerrors.Errorf("cannot reinitialize TPM connection after provisioning endorsement key: %w", err)
 	}

@@ -333,7 +333,7 @@ func UpdateKeyPCRProtectionPolicy(tpm *TPMConnection, keyPath, policyUpdatePath 
 	data, policyUpdateData, pinIndexPublic, err := readAndValidateKeyData(tpm.TPMContext, keyFile, policyUpdateFile, session)
 	if err != nil {
 		if isKeyFileError(err) {
-			return InvalidKeyFileError{err.Error()}
+			return InvalidKeyFileError(err.Error())
 		}
 		// FIXME: Turn the missing lock NV index in to ErrProvisioning
 		return xerrors.Errorf("cannot read and validate key data file: %w", err)
