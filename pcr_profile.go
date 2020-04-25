@@ -191,6 +191,53 @@ func (p *PCRProtectionProfile) traverseInstructions() *pcrProtectionProfileItera
 	return i
 }
 
+type pcrProtectionProfileStringifyBranchContext struct {
+	index int
+	total int
+}
+
+func (p *PCRProtectionProfile) String() string {
+	var b bytes.Buffer
+
+	contexts := []*pcrProtectionProfileStringifyBranchContext{{index: 0, total: 1}}
+	profileStart := true
+
+	iter := p.traverseInstructions()
+	for iter.hasMore() {
+		fmt.Fprintf(&b, "\n")
+		depth := len(contexts) - 1
+		if profileStart {
+			profileStart = false
+			fmt.Fprintf(&b, "%*s- Profile %d:\n", depth*3, "", contexts[0].index)
+		}
+
+		switch i := iter.next().(type) {
+		case *pcrProtectionProfileAddPCRValueInstr:
+			fmt.Fprintf(&b, "%*s AddPCRValue(%v, %d, %x)", depth*3, "", i.alg, i.pcr, i.value)
+		case *pcrProtectionProfileAddPCRValueFromTPMInstr:
+			fmt.Fprintf(&b, "%*s AddPCRValueFromTPM(%v, %d)", depth*3, "", i.alg, i.pcr)
+		case *pcrProtectionProfileExtendPCRInstr:
+			fmt.Fprintf(&b, "%*s ExtendPCR(%v, %d, %x)", depth*3, "", i.alg, i.pcr, i.value)
+		case *pcrProtectionProfileAddProfileORInstr:
+			contexts = append([]*pcrProtectionProfileStringifyBranchContext{{index: 0, total: len(i.profiles)}}, contexts...)
+			profileStart = true
+			fmt.Fprintf(&b, "%*s AddProfileOR(", depth*3, "")
+		case *pcrProtectionProfileEndProfileInstr:
+			contexts[0].index++
+			if contexts[0].index == contexts[0].total {
+				if len(contexts) > 1 {
+					fmt.Fprintf(&b, "%*s )", (depth-1)*3, "")
+				}
+				contexts = contexts[1:]
+			} else {
+				profileStart = true
+			}
+		}
+	}
+
+	return b.String()
+}
+
 // pcrProtectionProfileComputeContext records state used when computing PCR values for a PCRProtectionProfile
 type pcrProtectionProfileComputeContext struct {
 	parent *pcrProtectionProfileComputeContext
