@@ -44,6 +44,7 @@ const (
 var (
 	ComputeDbUpdate                          = computeDbUpdate
 	ComputeDynamicPolicy                     = computeDynamicPolicy
+	ComputePeImageDigest                     = computePeImageDigest
 	ComputePolicyORData                      = computePolicyORData
 	ComputeSnapModelDigest                   = computeSnapModelDigest
 	ComputeStaticPolicy                      = computeStaticPolicy
