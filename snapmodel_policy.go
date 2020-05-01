@@ -126,7 +126,7 @@ func AddSnapModelProfile(profile *PCRProtectionProfile, params *SnapModelProfile
 		subProfiles = append(subProfiles, NewPCRProtectionProfile().ExtendPCR(params.PCRAlgorithm, params.PCRIndex, digest))
 	}
 
-	profile.AddProfileOR(subProfiles...)
+	profile.AddBranches(subProfiles...)
 	return nil
 }
 

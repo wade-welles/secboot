@@ -72,6 +72,6 @@ func AddSystemdEFIStubProfile(profile *PCRProtectionProfile, params *SystemdEFIS
 		subProfiles = append(subProfiles, NewPCRProtectionProfile().ExtendPCR(params.PCRAlgorithm, params.PCRIndex, h.Sum(nil)))
 	}
 
-	profile.AddProfileOR(subProfiles...)
+	profile.AddBranches(subProfiles...)
 	return nil
 }

@@ -77,10 +77,10 @@ func TestPCRProtectionProfile(t *testing.T) {
 			alg:  tpm2.HashAlgorithmSHA256,
 			profile: func() *PCRProtectionProfile {
 				return NewPCRProtectionProfile().
-					AddProfileOR(
+					AddBranches(
 						NewPCRProtectionProfile().AddPCRValue(tpm2.HashAlgorithmSHA256, 7, makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "foo")),
 						NewPCRProtectionProfile().AddPCRValue(tpm2.HashAlgorithmSHA256, 7, makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "foo2"))).
-					AddProfileOR(
+					AddBranches(
 						NewPCRProtectionProfile().AddPCRValue(tpm2.HashAlgorithmSHA256, 8, makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "bar")),
 						NewPCRProtectionProfile().AddPCRValue(tpm2.HashAlgorithmSHA256, 8, makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "bar2")))
 			}(),
@@ -116,7 +116,7 @@ func TestPCRProtectionProfile(t *testing.T) {
 			desc: "OR/2",
 			alg:  tpm2.HashAlgorithmSHA256,
 			profile: func() *PCRProtectionProfile {
-				return NewPCRProtectionProfile().AddProfileOR(
+				return NewPCRProtectionProfile().AddBranches(
 					NewPCRProtectionProfile().
 						AddPCRValue(tpm2.HashAlgorithmSHA256, 7, makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "foo")).
 						AddPCRValue(tpm2.HashAlgorithmSHA256, 8, makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "bar")),
@@ -187,7 +187,7 @@ func TestPCRProtectionProfile(t *testing.T) {
 				return NewPCRProtectionProfile().
 					AddPCRValue(tpm2.HashAlgorithmSHA256, 7, makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "foo")).
 					AddPCRValue(tpm2.HashAlgorithmSHA256, 12, makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "bar")).
-					AddProfileOR(
+					AddBranches(
 						NewPCRProtectionProfile().
 							ExtendPCR(tpm2.HashAlgorithmSHA256, 7, makePCREventDigest(tpm2.HashAlgorithmSHA256, "event1")).
 							ExtendPCR(tpm2.HashAlgorithmSHA256, 12, makePCREventDigest(tpm2.HashAlgorithmSHA256, "event2")),
@@ -218,7 +218,7 @@ func TestPCRProtectionProfile(t *testing.T) {
 				return NewPCRProtectionProfile().
 					AddPCRValue(tpm2.HashAlgorithmSHA256, 7, makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "foo")).
 					AddPCRValue(tpm2.HashAlgorithmSHA256, 12, makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "bar")).
-					AddProfileOR(
+					AddBranches(
 						NewPCRProtectionProfile().
 							ExtendPCR(tpm2.HashAlgorithmSHA256, 7, makePCREventDigest(tpm2.HashAlgorithmSHA256, "event1")).
 							AddPCRValue(tpm2.HashAlgorithmSHA256, 12, makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "foo")),
@@ -284,7 +284,7 @@ func TestPCRProtectionProfile(t *testing.T) {
 			desc: "DeDuplicate",
 			alg:  tpm2.HashAlgorithmSHA256,
 			profile: func() *PCRProtectionProfile {
-				return NewPCRProtectionProfile().AddProfileOR(
+				return NewPCRProtectionProfile().AddBranches(
 					NewPCRProtectionProfile().
 						AddPCRValue(tpm2.HashAlgorithmSHA256, 7, makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "foo")).
 						AddPCRValue(tpm2.HashAlgorithmSHA256, 8, makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "bar")),
@@ -297,6 +297,88 @@ func TestPCRProtectionProfile(t *testing.T) {
 					tpm2.HashAlgorithmSHA256: {
 						7: makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "foo"),
 						8: makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "bar"),
+					},
+				},
+			},
+		},
+		{
+			// Verify that (A1 || A2) && (B1 || B2) is created correctly using chained function calls.
+			desc: "ChainedBranches/1",
+			alg:  tpm2.HashAlgorithmSHA256,
+			profile: func() *PCRProtectionProfile {
+				return NewPCRProtectionProfile().
+					BeginBranchPoint().
+					EnterBranch().
+					AddPCRValue(tpm2.HashAlgorithmSHA256, 7, makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "foo")).
+					ExitBranch().
+					EnterBranch().
+					AddPCRValue(tpm2.HashAlgorithmSHA256, 7, makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "foo2")).
+					ExitBranch().
+					FinishBranchPoint().
+					BeginBranchPoint().
+					EnterBranch().
+					AddPCRValue(tpm2.HashAlgorithmSHA256, 8, makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "bar")).
+					ExitBranch().
+					EnterBranch().
+					AddPCRValue(tpm2.HashAlgorithmSHA256, 8, makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "bar2")).
+					ExitBranch().
+					FinishBranchPoint()
+			}(),
+			values: []tpm2.PCRValues{
+				{
+					tpm2.HashAlgorithmSHA256: {
+						7: makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "foo"),
+						8: makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "bar"),
+					},
+				},
+				{
+					tpm2.HashAlgorithmSHA256: {
+						7: makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "foo2"),
+						8: makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "bar"),
+					},
+				},
+				{
+					tpm2.HashAlgorithmSHA256: {
+						7: makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "foo"),
+						8: makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "bar2"),
+					},
+				},
+				{
+					tpm2.HashAlgorithmSHA256: {
+						7: makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "foo2"),
+						8: makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "bar2"),
+					},
+				},
+			},
+		},
+		{
+			// Verify that (A1 && B1) || (A2 && B2) is created correctly using chained function calls.
+			desc: "ChainedBranches/2",
+			alg:  tpm2.HashAlgorithmSHA256,
+			profile: func() *PCRProtectionProfile {
+				return NewPCRProtectionProfile().
+					BeginBranchPoint().
+					EnterBranch().
+					AddPCRValue(tpm2.HashAlgorithmSHA256, 7, makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "foo")).
+					AddPCRValue(tpm2.HashAlgorithmSHA256, 8, makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "bar")).
+					ExitBranch().
+					EnterBranch().
+					AddPCRValue(tpm2.HashAlgorithmSHA256, 7, makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "foo2")).
+					AddPCRValue(tpm2.HashAlgorithmSHA256, 8, makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "bar2")).
+					ExitBranch().
+					FinishBranchPoint()
+			}(),
+			values: []tpm2.PCRValues{
+				{
+					tpm2.HashAlgorithmSHA256: {
+						7: makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "foo"),
+						8: makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "bar"),
+					},
+				},
+				{
+					tpm2.HashAlgorithmSHA256: {
+						7: makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "foo2"),
+						8: makePCRDigestFromEvents(tpm2.HashAlgorithmSHA256, "bar2"),
 					},
 				},
 			},

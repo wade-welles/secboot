@@ -706,7 +706,7 @@ type secureBootPolicyGenBranch struct {
 }
 
 // branch creates a branch point in the current branch if one doesn't exist already (although inserting this branch point with
-// PCRProtectionProfile.AddProfileOR is deferred until later), and creates a new sub-branch at the current branch point. Once
+// PCRProtectionProfile.AddBranches is deferred until later), and creates a new sub-branch at the current branch point. Once
 // this has been called, no more instructions can be inserted in to the current branch.
 func (p *secureBootPolicyGenBranch) branch() *secureBootPolicyGenBranch {
 	c := &secureBootPolicyGenBranch{
@@ -1214,7 +1214,7 @@ func (g *secureBootPolicyGen) run(profile *PCRProtectionProfile, events []*tcglo
 			continue
 		}
 
-		b.profile.AddProfileOR(subProfiles...)
+		b.profile.AddBranches(subProfiles...)
 	}
 
 	validPathsForCurrentDb := false
@@ -1234,7 +1234,7 @@ func (g *secureBootPolicyGen) run(profile *PCRProtectionProfile, events []*tcglo
 		return errors.New("no bootable paths with current EFI signature database")
 	}
 
-	profile.AddProfileOR(subProfiles...)
+	profile.AddBranches(subProfiles...)
 
 	return nil
 }

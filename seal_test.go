@@ -312,7 +312,7 @@ func TestSealKeyToTPMErrorHandling(t *testing.T) {
 	t.Run("InvalidPCRProfile", func(t *testing.T) {
 		pcrProfile := NewPCRProtectionProfile().
 			AddPCRValueFromTPM(tpm2.HashAlgorithmSHA256, 7).
-			AddProfileOR(
+			AddBranches(
 				NewPCRProtectionProfile(),
 				NewPCRProtectionProfile().AddPCRValueFromTPM(tpm2.HashAlgorithmSHA256, 8))
 		err := run(t, "", &KeyCreationParams{PCRProfile: pcrProfile, PINHandle: 0x01810000}, key)
