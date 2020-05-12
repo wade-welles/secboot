@@ -22,7 +22,7 @@ package secboot
 import (
 	"bytes"
 	"crypto"
-	"crypto/rsa"
+	"crypto/ecdsa"
 	"crypto/x509"
 	"errors"
 	"fmt"
@@ -261,7 +261,7 @@ func validateKeyData(tpm *tpm2.TPMContext, data *keyData, policyUpdateData *keyP
 	if err != nil {
 		return nil, keyFileError{xerrors.Errorf("cannot compute name of dynamic authorization policy key: %w", err)}
 	}
-	if data.StaticPolicyData.AuthPublicKey.Type != tpm2.ObjectTypeRSA {
+	if data.StaticPolicyData.AuthPublicKey.Type != tpm2.ObjectTypeECC {
 		return nil, keyFileError{errors.New("public area of dynamic authorization policy signing key has the wrong type")}
 	}
 
@@ -333,15 +333,22 @@ func validateKeyData(tpm *tpm2.TPMContext, data *keyData, policyUpdateData *keyP
 		return nil, keyFileError{errors.New("key data file and dynamic authorization policy update data file mismatch: digest doesn't match creation data")}
 	}
 
-	authKey, err := x509.ParsePKCS1PrivateKey(policyUpdateData.Data.AuthKey)
+	authKey, err := x509.ParsePKCS8PrivateKey(policyUpdateData.Data.AuthKey)
 	if err != nil {
 		return nil, keyFileError{xerrors.Errorf("cannot parse dynamic authorization policy signing key: %w", err)}
 	}
+	authKeyECDSA, isECDSA := authKey.(*ecdsa.PrivateKey)
+	if !isECDSA {
+		return nil, keyFileError{errors.New("dynamic authorization policy signing key is the wrong type")}
+	}
 
-	authPublicKey := rsa.PublicKey{
-		N: new(big.Int).SetBytes(data.StaticPolicyData.AuthPublicKey.Unique.RSA()),
-		E: int(data.StaticPolicyData.AuthPublicKey.Params.RSADetail().Exponent)}
-	if authKey.PublicKey.E != authPublicKey.E || authKey.PublicKey.N.Cmp(authPublicKey.N) != 0 {
+	authPublicKey := ecdsa.PublicKey{
+		Curve: data.StaticPolicyData.AuthPublicKey.Params.ECCDetail().CurveID.GoCurve(),
+		X:     (&big.Int{}).SetBytes(data.StaticPolicyData.AuthPublicKey.Unique.ECC().X),
+		Y:     (&big.Int{}).SetBytes(data.StaticPolicyData.AuthPublicKey.Unique.ECC().Y)}
+	if authKeyECDSA.PublicKey.Curve != authPublicKey.Curve ||
+		authKeyECDSA.PublicKey.X.Cmp(authPublicKey.X) != 0 ||
+		authKeyECDSA.PublicKey.Y.Cmp(authPublicKey.Y) != 0 {
 		return nil, keyFileError{errors.New("dynamic authorization policy signing private key doesn't match public key")}
 	}
 

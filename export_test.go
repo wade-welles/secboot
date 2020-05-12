@@ -20,7 +20,7 @@
 package secboot
 
 import (
-	"crypto/rsa"
+	"crypto/ecdsa"
 	"io"
 	"os"
 
@@ -46,6 +46,7 @@ var (
 	ComputeSnapModelDigest                   = computeSnapModelDigest
 	ComputeStaticPolicy                      = computeStaticPolicy
 	CreatePinNVIndex                         = createPinNVIndex
+	CreatePublicAreaForECDSAKey              = createPublicAreaForECDSAKey
 	CreatePublicAreaForRSASigningKey         = createPublicAreaForRSASigningKey
 	DecodeSecureBootDb                       = decodeSecureBootDb
 	DecodeWinCertificate                     = decodeWinCertificate
@@ -169,7 +170,7 @@ func MakeMockPolicyPCRValuesFull(params []MockPolicyPCRParam) (out []tpm2.PCRVal
 	for {
 		v := make(tpm2.PCRValues)
 		for i := range params {
-			v.SetValue(params[i].PCR, params[i].Alg, params[i].Digests[indices[i]])
+			v.SetValue(params[i].Alg, params[i].PCR, params[i].Digests[indices[i]])
 		}
 		out = append(out, v)
 
@@ -224,7 +225,7 @@ func MockSystemdCryptsetupPath(path string) (restore func()) {
 	}
 }
 
-func NewDynamicPolicyComputeParams(key *rsa.PrivateKey, signAlg tpm2.HashAlgorithmId, pcrValues []tpm2.PCRValues, policyCountIndexName tpm2.Name, policyCount uint64) *dynamicPolicyComputeParams {
+func NewDynamicPolicyComputeParams(key *ecdsa.PrivateKey, signAlg tpm2.HashAlgorithmId, pcrValues []tpm2.PCRValues, policyCountIndexName tpm2.Name, policyCount uint64) *dynamicPolicyComputeParams {
 	return &dynamicPolicyComputeParams{
 		key:                  key,
 		signAlg:              signAlg,
