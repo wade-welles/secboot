@@ -47,7 +47,6 @@ var (
 	ComputeStaticPolicy                      = computeStaticPolicy
 	CreatePinNVIndex                         = createPinNVIndex
 	CreatePublicAreaForECDSAKey              = createPublicAreaForECDSAKey
-	CreatePublicAreaForRSASigningKey         = createPublicAreaForRSASigningKey
 	DecodeSecureBootDb                       = decodeSecureBootDb
 	DecodeWinCertificate                     = decodeWinCertificate
 	EkTemplate                               = ekTemplate
