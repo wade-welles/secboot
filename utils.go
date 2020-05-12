@@ -168,8 +168,8 @@ func createPublicAreaForECDSAKey(key *ecdsa.PublicKey) *tpm2.Public {
 				KDF:       tpm2.KDFScheme{Scheme: tpm2.KDFAlgorithmNull}}},
 		Unique: tpm2.PublicIDU{
 			Data: &tpm2.ECCPoint{
-				X: bigIntToBytesZeroExtended(key.X, key.Params().BitSize / 8),
-				Y: bigIntToBytesZeroExtended(key.Y, key.Params().BitSize / 8)}}}
+				X: bigIntToBytesZeroExtended(key.X, key.Params().BitSize/8),
+				Y: bigIntToBytesZeroExtended(key.Y, key.Params().BitSize/8)}}}
 }
 
 // digestListContains indicates whether the specified digest is present in the list of digests.

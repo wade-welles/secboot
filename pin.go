@@ -189,7 +189,7 @@ func createPinNVIndex(tpm *tpm2.TPMContext, handle tpm2.Handle, updateKeyName tp
 		SigAlg: tpm2.SigSchemeAlgECDSA,
 		Signature: tpm2.SignatureU{
 			Data: &tpm2.SignatureECDSA{
-				Hash: signDigest,
+				Hash:       signDigest,
 				SignatureR: sigR.Bytes(),
 				SignatureS: sigS.Bytes()}}}
 
