@@ -264,6 +264,12 @@ func validateKeyData(tpm *tpm2.TPMContext, data *keyData, policyUpdateData *keyP
 	if data.StaticPolicyData.AuthPublicKey.Type != tpm2.ObjectTypeECC {
 		return nil, keyFileError{errors.New("public area of dynamic authorization policy signing key has the wrong type")}
 	}
+	if data.StaticPolicyData.AuthPublicKey.Params.ECCDetail().Scheme.Scheme != tpm2.ECCSchemeECDSA {
+		return nil, keyFileError{errors.New("public area of dynamic authorization policy signing key has the wrong scheme")}
+	}
+	if data.StaticPolicyData.AuthPublicKey.NameAlg != data.StaticPolicyData.AuthPublicKey.Params.ECCDetail().Scheme.Details.ECDSA().HashAlg {
+		return nil, keyFileError{errors.New("dynamic authorization policy signing key algorithm must match name algorithm")}
+	}
 
 	// Make sure that the static authorization policy data is consistent with the sealed key object's policy.
 	trial, err := tpm2.ComputeAuthPolicy(data.KeyPublic.NameAlg)

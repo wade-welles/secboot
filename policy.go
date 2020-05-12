@@ -111,7 +111,7 @@ func incrementDynamicPolicyCounter(tpm *tpm2.TPMContext, nvPublic *tpm2.NVPublic
 	defer tpm.FlushContext(policySession)
 
 	// Compute a digest for signing with the update key
-	signDigest := tpm2.HashAlgorithmSHA256
+	signDigest := keyPublic.Params.ECCDetail().Scheme.Details.ECDSA().HashAlg
 	h := signDigest.NewHash()
 	h.Write(policySession.NonceTPM())
 	binary.Write(h, binary.BigEndian, int32(0)) // expiration
@@ -301,7 +301,7 @@ func ensureLockNVIndex(tpm *tpm2.TPMContext, session tpm2.SessionContext) error 
 	defer tpm.FlushContext(policySession)
 
 	// Compute a digest for signing with our key
-	signDigest := tpm2.HashAlgorithmSHA256
+	signDigest := keyPublic.Params.ECCDetail().Scheme.Details.ECDSA().HashAlg
 	h := signDigest.NewHash()
 	h.Write(policySession.NonceTPM())
 	binary.Write(h, binary.BigEndian, int32(0))
