@@ -333,22 +333,18 @@ func validateKeyData(tpm *tpm2.TPMContext, data *keyData, policyUpdateData *keyP
 		return nil, keyFileError{errors.New("key data file and dynamic authorization policy update data file mismatch: digest doesn't match creation data")}
 	}
 
-	authKey, err := x509.ParsePKCS8PrivateKey(policyUpdateData.Data.AuthKey)
+	authKey, err := x509.ParseECPrivateKey(policyUpdateData.Data.AuthKey)
 	if err != nil {
 		return nil, keyFileError{xerrors.Errorf("cannot parse dynamic authorization policy signing key: %w", err)}
-	}
-	authKeyECDSA, isECDSA := authKey.(*ecdsa.PrivateKey)
-	if !isECDSA {
-		return nil, keyFileError{errors.New("dynamic authorization policy signing key is the wrong type")}
 	}
 
 	authPublicKey := ecdsa.PublicKey{
 		Curve: data.StaticPolicyData.AuthPublicKey.Params.ECCDetail().CurveID.GoCurve(),
 		X:     (&big.Int{}).SetBytes(data.StaticPolicyData.AuthPublicKey.Unique.ECC().X),
 		Y:     (&big.Int{}).SetBytes(data.StaticPolicyData.AuthPublicKey.Unique.ECC().Y)}
-	if authKeyECDSA.PublicKey.Curve != authPublicKey.Curve ||
-		authKeyECDSA.PublicKey.X.Cmp(authPublicKey.X) != 0 ||
-		authKeyECDSA.PublicKey.Y.Cmp(authPublicKey.Y) != 0 {
+	if authKey.PublicKey.Curve != authPublicKey.Curve ||
+		authKey.PublicKey.X.Cmp(authPublicKey.X) != 0 ||
+		authKey.PublicKey.Y.Cmp(authPublicKey.Y) != 0 {
 		return nil, keyFileError{errors.New("dynamic authorization policy signing private key doesn't match public key")}
 	}
 

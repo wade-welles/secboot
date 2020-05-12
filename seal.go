@@ -245,7 +245,7 @@ func SealKeyToTPM(tpm *TPMConnection, key []byte, keyPath, policyUpdatePath stri
 
 	// Have the digest of the private data recorded in the creation data for the sealed data object.
 	var policyUpdateData keyPolicyUpdateData
-	authKeyBytes, err := x509.MarshalPKCS8PrivateKey(authKey)
+	authKeyBytes, err := x509.MarshalECPrivateKey(authKey)
 	if err != nil {
 		return xerrors.Errorf("cannot marshal key for signing authorization policy updates: %w", err)
 	}
@@ -344,13 +344,9 @@ func UpdateKeyPCRProtectionPolicy(tpm *TPMConnection, keyPath, policyUpdatePath 
 		return xerrors.Errorf("cannot read and validate key data file: %w", err)
 	}
 
-	authKey, err := x509.ParsePKCS8PrivateKey(policyUpdateData.Data.AuthKey)
+	authKey, err := x509.ParseECPrivateKey(policyUpdateData.Data.AuthKey)
 	if err != nil {
 		return xerrors.Errorf("cannot parse authorization key: %w", err)
-	}
-	authKeyECDSA, isECDSA := authKey.(*ecdsa.PrivateKey)
-	if !isECDSA {
-		return errors.New("authorization key has the wrong type")
 	}
 
 	// Compute a new dynamic authorization policy
@@ -358,7 +354,7 @@ func UpdateKeyPCRProtectionPolicy(tpm *TPMConnection, keyPath, policyUpdatePath 
 		pcrProfile = &PCRProtectionProfile{}
 	}
 	policyData, err := computeSealedKeyDynamicAuthPolicy(tpm.TPMContext, data.KeyPublic.NameAlg, data.StaticPolicyData.AuthPublicKey.NameAlg,
-		authKeyECDSA, pinIndexPublic, data.StaticPolicyData.PinIndexAuthPolicies, pcrProfile, session)
+		authKey, pinIndexPublic, data.StaticPolicyData.PinIndexAuthPolicies, pcrProfile, session)
 	if err != nil {
 		return err
 	}
@@ -370,7 +366,7 @@ func UpdateKeyPCRProtectionPolicy(tpm *TPMConnection, keyPath, policyUpdatePath 
 		return xerrors.Errorf("cannot write key data file: %v", err)
 	}
 
-	if err := incrementDynamicPolicyCounter(tpm.TPMContext, pinIndexPublic, data.StaticPolicyData.PinIndexAuthPolicies, authKeyECDSA,
+	if err := incrementDynamicPolicyCounter(tpm.TPMContext, pinIndexPublic, data.StaticPolicyData.PinIndexAuthPolicies, authKey,
 		data.StaticPolicyData.AuthPublicKey, session); err != nil {
 		return xerrors.Errorf("cannot revoke old dynamic authorization policies: %w", err)
 	}
